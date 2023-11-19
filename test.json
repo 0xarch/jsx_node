@@ -1,0 +1,18 @@
+{
+    "parseCustomTagToCSSClass":true,
+    "classPrefix":"jM3-",
+    "replaceVariables":true,
+    "writeToFile":false,
+    "removeLineBreak":false,
+    "elementReplace":{
+        "Divider":"hr"
+    },
+    "variables":{
+        "className1":"className1-Test",
+        "className2":["classNameArray-Test1","classNameArray-Test2"],
+        "className3":["classNameRepeatedArray-Test","classNameRepeatedArray-Test"],
+        "id1":"id-Test",
+        "onclick1":"alert('test')",
+        "testText1":"<This is test text/></This>"
+    }
+}
