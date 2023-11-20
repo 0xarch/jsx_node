@@ -4,6 +4,7 @@
     "replaceVariables":true,
     "writeToFile":false,
     "removeLineBreak":false,
+    "skipWhitespace":true,
     "elementReplace":{
         "Divider":"hr"
     },
@@ -13,6 +14,7 @@
         "className3":["classNameRepeatedArray-Test","classNameRepeatedArray-Test"],
         "id1":"id-Test",
         "onclick1":"alert('test')",
-        "testText1":"<This is test text/></This>"
+        "testText1":"<This is test text/></This>",
+        "testArr":["T1","T2"]
     }
 }

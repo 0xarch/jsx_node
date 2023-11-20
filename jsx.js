@@ -12,28 +12,20 @@ class Token{
         this.type = type;
         this.symbol = symbol;
     }
-    getType(){
-        return this.type;
-    }
-    getSymbol(){
-        return this.symbol;
-    }
 }
 
 /**
  * 
  * @param { string } text 
  */
-function AST(text,removeLineBreak){
+function AST(text,removeLineBreak,skipWhitespace){
     let splits = text.split("");
     let i = 0,len = splits.length;
     let processed = [];
     while(i<len){
         let char_1 = splits[i];
         if(char_1 == '\\'){
-            i++;
-            processed.push(new Token('rawChar',splits[i]));
-            continue;
+            processed.push(new Token('rawChar',splits[++i]));
         }else
         if(JSXSymbols.includes(char_1)){
             switch(char_1){
@@ -161,17 +153,39 @@ function AST(text,removeLineBreak){
                     /**
                      * Token: 替换量
                      */
-                    let vari = '${';
+                    let inner = '', stack = 0, stacks = [];
                     i++;
                     while(i<len){
-                        if(splits[i] == '}' && splits[i-1] != '\\'){
-                            vari += '}';
-                            processed.push(new Token('variableContent',vari));
-                            break;
+                        if(splits[i] == '\\'){
+                            inner += splits[++i];
                         }else{
-                            vari += splits[i];
+                            if(splits[i] == '{'){
+                                inner += '{';
+                                stacks.push('{',inner.length);
+                                stack++;
+                            }else
+                            if(splits[i] == '}'){
+                                if(stack == 0){
+                                    if(stacks.length!=0){
+                                        let str = inner.slice(stacks[stacks.indexOf('{')+1],stacks[stacks.lastIndexOf('}')+1]-1);
+                                        let str_start = inner.slice(0,stacks[stacks.indexOf('{')+1]),
+                                            str_end = inner.slice(stacks[stacks.lastIndexOf('}')+1]-1,inner.length);
+                                        let __processed = AST(str,removeLineBreak,skipWhitespace);
+                                        processed.push(new Token('variableContent','`;'+str_start));
+                                        processed.push(new Token('variables',__processed));
+                                        processed.push(new Token('variableContent',str_end+';__str+=`'));
+                                    }else processed.push(new Token('variableContent','${'+inner+'}'));
+                                    break;
+                                }else{
+                                    inner += '}';
+                                    stacks.push('}',inner.length);
+                                    stack--;
+                                }
+                            }else{
+                                inner += splits[i];
+                            }
+                            i++;
                         }
-                        i++;
                     }
                     break;
                 case '}': /** Token: 结尾  |  这个代码块在解析合法JSX时不会单独执行操作 */ break;
@@ -180,21 +194,33 @@ function AST(text,removeLineBreak){
                     if(!removeLineBreak){
                         processed.push(new Token('rawChar',splits[i]));
                     }
+                    if(skipWhitespace){
+                        if(splits[i+1] == ' '){
+                            i++;
+                            while(i<len){
+                                if(splits[i]!=' '){
+                                    i--;
+                                    break;
+                                }
+                                i++;
+                            }
+                        }
+                    }
                     break;
-
             }
         }
-        else{
-            processed.push(new Token('rawChar',splits[i]));
-        }
+        else processed.push(new Token('rawChar',splits[i]));
         i++;
     }
     return processed;
 }
 
-function parseToJS(tokenArray,config,debug = false){
+function parseToJS(tokenArray,config,debug = false,is_first){
     let i = 0,len = tokenArray.length;
-    let processed = '', element_stack = [];
+    let v_start;
+    if(is_first==undefined) v_start='let __str="";';
+    else v_start='';
+    let processed = v_start+'__str+=`', element_stack = [];
     // 当启用 parseCustomTagToCSSClass 时 元素栈是有用的，这意味着 Token:tagEnd 的 symbol 其实没用
     if(debug) console.log(tokenArray);
     let class_prefix = config.classPrefix != undefined ?config.classPrefix :'';
@@ -243,6 +269,10 @@ function parseToJS(tokenArray,config,debug = false){
                 let tagName = element_stack.pop();
                 str = '</' + tagName + '>';
                 break;
+            case 'variables':
+                let variables = token_1.symbol;
+                str += parseToJS(variables,config,debug,false);
+                break;
             case 'variableContent':
             case 'rawChar':
                 str = token_1.symbol;
@@ -251,6 +281,8 @@ function parseToJS(tokenArray,config,debug = false){
         processed += str;
         i++;
     }
+    processed += '`';
+    if(is_first==undefined) processed+=';__str';
     return processed;
 }
 
