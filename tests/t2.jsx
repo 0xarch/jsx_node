@@ -9,9 +9,9 @@
     </Paper>
     <Sidebar>
         <TOC id={id1}/>
-        {testArr.forEach((item)=>{
-            <Item>{item} from {testArr} </Item>
-        })}
+        {testArr.map((item)=>
+            {<Item>{item} from {testArr} </Item>}
+        ).join("")}
     </Sidebar>
     <nav>
         <h1> JSX Test </h1>

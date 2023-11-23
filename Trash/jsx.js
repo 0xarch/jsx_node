@@ -153,7 +153,7 @@ function AST(text,removeLineBreak,skipWhitespace){
                     /**
                      * Token: 替换量
                      */
-                    let inner = '', stack = 0, stack_i = [], stack_quote = [];
+                    let inner = '', stack = 0, stacks = [];
                     i++;
                     while(i<len){
                         if(splits[i] == '\\'){
@@ -161,26 +161,24 @@ function AST(text,removeLineBreak,skipWhitespace){
                         }else{
                             if(splits[i] == '{'){
                                 inner += '{';
-                                stack_quote.push(1);
-                                stack_i.push(inner.length);
+                                stacks.push('{',inner.length);
                                 stack++;
                             }else
                             if(splits[i] == '}'){
                                 if(stack == 0){
-                                    if(stack_quote.length!=0){
-                                        let str = inner.slice(stack_i[stack_quote.indexOf(1)],stack_i[stack_quote.lastIndexOf(2)]-1);
-                                        let str_start = inner.slice(0,stack_i[stack_quote.indexOf(1)]-1),
-                                            str_end = inner.slice(stack_i[stack_quote.lastIndexOf(2)],inner.length);
+                                    if(stacks.length!=0){
+                                        let str = inner.slice(stacks[stacks.indexOf('{')+1],stacks[stacks.lastIndexOf('}')+1]-1);
+                                        let str_start = inner.slice(0,stacks[stacks.indexOf('{')+1]),
+                                            str_end = inner.slice(stacks[stacks.lastIndexOf('}')+1]-1,inner.length);
                                         let __processed = AST(str,removeLineBreak,skipWhitespace);
-                                        processed.push(new Token('variableContent','${'+str_start));
+                                        processed.push(new Token('variableContent','`;'+str_start));
                                         processed.push(new Token('variables',__processed));
-                                        processed.push(new Token('variableContent',str_end+'}'));
+                                        processed.push(new Token('variableContent',str_end+';__str+=`'));
                                     }else processed.push(new Token('variableContent','${'+inner+'}'));
                                     break;
                                 }else{
                                     inner += '}';
-                                    stack_quote.push(2);
-                                    stack_i.push(inner.length);
+                                    stacks.push('}',inner.length);
                                     stack--;
                                 }
                             }else{
@@ -217,12 +215,12 @@ function AST(text,removeLineBreak,skipWhitespace){
     return processed;
 }
 
-function parseToJS(tokenArray,config,debug = false){
+function parseToJS(tokenArray,config,debug = false,is_first){
     let i = 0,len = tokenArray.length;
     let v_start;
-    // if(is_first==undefined) v_start='let __str="";';
-    // else v_start='';
-    let processed = '`', element_stack = [];
+    if(is_first==undefined) v_start='let __str="";';
+    else v_start='';
+    let processed = v_start+'__str+=`', element_stack = [];
     // 当启用 parseCustomTagToCSSClass 时 元素栈是有用的，这意味着 Token:tagEnd 的 symbol 其实没用
     if(debug) console.log(tokenArray);
     let class_prefix = config.classPrefix != undefined ?config.classPrefix :'';
@@ -284,7 +282,7 @@ function parseToJS(tokenArray,config,debug = false){
         i++;
     }
     processed += '`';
-    // if(is_first==undefined) processed+=';__str';
+    if(is_first==undefined) processed+=';__str';
     return processed;
 }
 
